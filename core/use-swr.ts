@@ -235,6 +235,9 @@ export const useSWRHandler = <Data = any, Error = any>(
 
   // The revalidation function is a carefully crafted wrapper of the original
   // `fetcher`, to correctly handle the many edge cases.
+
+  // 再バリデーション関数は、オリジナルの
+  // 多くのエッジケースを正しく処理するために、`fetcher` のラッパーです。
   const revalidate = useCallback(
     async (revalidateOpts?: RevalidatorOptions): Promise<boolean> => {
       const currentFetcher = fetcherRef.current
@@ -255,6 +258,8 @@ export const useSWRHandler = <Data = any, Error = any>(
 
       // If there is no ongoing concurrent request, or `dedupe` is not set, a
       // new request should be initiated.
+      // 進行中の同時リクエストがない場合、または `dedupe` が設定されていない場合、
+      // 新しいリクエストが開始されるべきです。
       const shouldStartNewRequest = !FETCH[key] || !opts.dedupe
 
       /*
@@ -448,6 +453,8 @@ export const useSWRHandler = <Data = any, Error = any>(
 
           // Error event and retry logic. Only for the actual request, not
           // deduped ones.
+          // エラーイベントと再試行のロジック。実際のリクエストに対してのみ。
+          // 控除されたものではありません。
           if (shouldStartNewRequest && callbackSafeguard()) {
             currentConfig.onError(err, key, currentConfig)
             if (
@@ -459,6 +466,10 @@ export const useSWRHandler = <Data = any, Error = any>(
                 // If it's inactive, stop. It will auto-revalidate when
                 // refocusing or reconnecting.
                 // When retrying, deduplication is always enabled.
+
+               // 非アクティブの場合は停止する。以下の場合に自動検証されます。
+                // 再フォーカスまたは再接続を行います。
+                // 再試行時には、常に重複排除が有効になります。
                 currentConfig.onErrorRetry(
                   err,
                   key,
