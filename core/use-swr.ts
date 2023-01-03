@@ -289,6 +289,7 @@ export const useSWRHandler = <Data = any, Error = any>(
       }
       const cleanupState = () => {
         // Check if it's still the same request before deleting it.
+        // 削除する前に、まだ同じ要求であるかどうかを確認してください。
         const requestInfo = FETCH[key]
         if (requestInfo && requestInfo[1] === startAt) {
           delete FETCH[key]
@@ -307,6 +308,8 @@ export const useSWRHandler = <Data = any, Error = any>(
           setCache(initialState)
           // If no cache is being rendered currently (it shows a blank page),
           // we trigger the loading slow event.
+          //現在キャッシュがレンダリングされていない場合（白紙のページが表示される）。
+          // ロードスローイベントを発生させます。
           if (config.loadingTimeout && isUndefined(getCache().data)) {
             setTimeout(() => {
               if (loading && callbackSafeguard()) {
@@ -317,6 +320,8 @@ export const useSWRHandler = <Data = any, Error = any>(
 
           // Start the request and save the timestamp.
           // Key must be truthy if entering here.
+          // リクエストを開始し、タイムスタンプを保存する。
+          // ここに入力する場合、キーは真実でなければなりません。
           FETCH[key] = [
             currentFetcher(fnArg as DefinitelyTruthy<Key>),
             getTimestamp()
@@ -325,12 +330,16 @@ export const useSWRHandler = <Data = any, Error = any>(
 
         // Wait until the ongoing request is done. Deduplication is also
         // considered here.
+        // 進行中の要求が終了するまで待機する。重複排除も
+        // ここで考慮される。
         ;[newData, startAt] = FETCH[key]
         newData = await newData
 
         if (shouldStartNewRequest) {
           // If the request isn't interrupted, clean it up after the
           // deduplication interval.
+          // リクエストが中断されない場合、重複排除間隔の後にそれをクリーンアップします。
+          // 重複排除の間隔
           setTimeout(cleanupState, config.dedupingInterval)
         }
 
@@ -340,6 +349,13 @@ export const useSWRHandler = <Data = any, Error = any>(
         //        req2---------------->res2
         // the request that fired later will always be kept.
         // The timestamp maybe be `undefined` or a number
+        
+        // 現在のリクエストの後に、他の進行中のリクエストがある場合。
+        // レースコンディションを避けるために、現在のものを無視する必要があります。
+        // req1------------------>res1 (現在のもの)
+        // req2---------------->res2
+        // 後に開始されたリクエストは常に保持されます。
+        // タイムスタンプは `undefined` か数字です。
         if (!FETCH[key] || FETCH[key][1] !== startAt) {
           if (shouldStartNewRequest) {
             if (callbackSafeguard()) {
@@ -364,6 +380,19 @@ export const useSWRHandler = <Data = any, Error = any>(
         //       mutate-------...---------->
         // we have to ignore the revalidation result (res) because it's no longer fresh.
         // meanwhile, a new revalidation should be triggered when the mutation ends.
+
+        // もし他の変異があれば、それは現在の再検証と重なる。
+        // ケース 1:
+        // req------------------>res
+        // mutate------>end
+        // ケース 2:
+        // req------------>res
+        // ミューテート-->エンド
+        // ケース 3
+        // req------------------>res
+        // mutate------...---------->.
+        // 再検証の結果 (res) はもう新鮮ではないので無視しなければなりません。
+        // 一方、変異が終了した時点で新たな再検証を行う必要があります。
         const mutationInfo = MUTATION[key]
         if (
           !isUndefined(mutationInfo) &&
@@ -384,13 +413,21 @@ export const useSWRHandler = <Data = any, Error = any>(
         }
         // Deep compare with the latest state to avoid extra re-renders.
         // For local state, compare and assign.
+        
+        // 余分な再レンダリングを避けるため、最新の状態と深く比較する。
+        // ローカルな状態に対して、比較と代入を行う。
         const cacheData = getCache().data
 
         // Since the compare fn could be custom fn
         // cacheData might be different from newData even when compare fn returns True
+
+        // compare fn はカスタム fn である可能性があるため，cachedata が newData と異なる可能性がある．
+        // compare fn が True を返しても、cacheData は newData と異なるかもしれません。
         finalState.data = compare(cacheData, newData) ? cacheData : newData
 
         // Trigger the successful callback if it's the original request.
+
+        // オリジナルのリクエストであれば、成功したコールバックをトリガーする。
         if (shouldStartNewRequest) {
           if (callbackSafeguard()) {
             getConfig().onSuccess(newData, key, config)
@@ -403,8 +440,10 @@ export const useSWRHandler = <Data = any, Error = any>(
         const { shouldRetryOnError } = currentConfig
 
         // Not paused, we continue handling the error. Otherwise, discard it.
+        // 一時停止していない場合は、エラーの処理を続行する。そうでない場合は、破棄する。
         if (!currentConfig.isPaused()) {
           // Get a new error, don't use deep comparison for errors.
+          // 新しいエラーを取得する、エラーに深い比較を使用しないでください。
           finalState.error = err as Error
 
           // Error event and retry logic. Only for the actual request, not
