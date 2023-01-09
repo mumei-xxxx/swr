@@ -9,6 +9,7 @@ import type {
 } from '../types'
 
 // Create a custom hook with a middleware
+// ミドルウェアを使ったカスタムフックの作成
 export const withMiddleware = (
   useSWR: SWRHook,
   middleware: Middleware

@@ -487,9 +487,11 @@ export const useSWRHandler = <Data = any, Error = any>(
       }
 
       // Mark loading as stopped.
+      // ロードを停止とマークする。
       loading = false
 
       // Update the current hook's state.
+      // 現在のフックの状態を更新する。
       finishRequestAndUpdateState()
 
       return true
@@ -505,14 +507,29 @@ export const useSWRHandler = <Data = any, Error = any>(
     // So we omit the values from the deps array
     // even though it might cause unexpected behaviors.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+
+   // また、 `eventsCallback`、 `fnArg`、および `keyValidating` は `key` に依存しています。
+    // `keyValidating` は `key` に依存しているので、それらを deps 配列から除外することができます。
+    // deps 配列から除外することができます。
+    //
+    // FIXME:
+   // `fn` と `config` はライフサイクルの間に変更されるかもしれません。
+    // しかし、このようにレンダリングごとに変更されるかもしれません。
+    // `useSWR('key', () => fetch('/api/'), { suspense: true })` とします。
+    // そこで、deps 配列から値を省略します。
+    // たとえそれが予期せぬ振る舞いを引き起こすかもしれないとしても。
+    // eslint-disable-next-lineのreact-hooks/exhaustive-depsを使用します。
     [key, cache]
   )
 
   // Similar to the global mutate but bound to the current cache and key.
   // `cache` isn't allowed to change during the lifecycle.
+ // グローバルな mutate に似ていますが、現在のキャッシュとキーにバインドされています。
+  // ライフサイクル中は `cache` を変更することはできません。
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const boundMutate: SWRResponse<Data, Error>['mutate'] = useCallback(
     // Use callback to make sure `keyRef.current` returns latest result every time
+    // コールバックを使用して、`keyRef.current` が毎回最新の結果を返すようにする。
     (...args) => {
       return internalMutate(cache, keyRef.current, ...args)
     },
@@ -521,17 +538,21 @@ export const useSWRHandler = <Data = any, Error = any>(
   )
 
   // The logic for updating refs.
+  //参照元を更新するロジックです。
   useIsomorphicLayoutEffect(() => {
     fetcherRef.current = fetcher
     configRef.current = config
     // Handle laggy data updates. If there's cached data of the current key,
     // it'll be the correct reference.
+    // 遅延のあるデータ更新を処理する。現在のキーのキャッシュされたデータがある場合。
+    // それが正しい参照となる。
     if (!isUndefined(cachedData)) {
       laggyDataRef.current = cachedData
     }
   })
 
   // After mounted or key changed.
+  // 装着後、またはキー交換後。
   useIsomorphicLayoutEffect(() => {
     if (!key) return
 
@@ -539,6 +560,8 @@ export const useSWRHandler = <Data = any, Error = any>(
 
     // Expose revalidators to global event listeners. So we can trigger
     // revalidation from the outside.
+    // グローバルなイベントリスナーに対してバリデータを公開する。そのため
+    // 外部から再バリデーションを起動できる。
     let nextFocusRevalidatedAt = 0
     const onRevalidate = (type: RevalidateEvent) => {
       if (type == revalidateEvents.FOCUS_EVENT) {
@@ -564,14 +587,17 @@ export const useSWRHandler = <Data = any, Error = any>(
     const unsubEvents = subscribeCallback(key, EVENT_REVALIDATORS, onRevalidate)
 
     // Mark the component as mounted and update corresponding refs.
+    // コンポーネントをマウントされたものとしてマークし、対応する参照情報を更新します。
     unmountedRef.current = false
     keyRef.current = key
     initialMountedRef.current = true
 
     // Keep the original key in the cache.
+    // オリジナルキーはキャッシュに保管してください。
     setCache({ _k: fnArg })
 
     // Trigger a revalidation.
+    // 再バリデーションのきっかけとなる
     if (shouldDoInitialRevalidation) {
       if (isUndefined(data) || IS_SERVER) {
         // Revalidate immediately.
@@ -579,6 +605,9 @@ export const useSWRHandler = <Data = any, Error = any>(
       } else {
         // Delay the revalidate if we have data to return so we won't block
         // rendering.
+
+       // 返すべきデータがある場合、再検証を遅らせて、レンダリングをブロックしないようにする。
+        // レンダリングをブロックしないようにする。
         rAF(softRevalidate)
       }
     }
@@ -598,6 +627,9 @@ export const useSWRHandler = <Data = any, Error = any>(
     function next() {
       // Use the passed interval
       // ...or invoke the function with the updated data to get the interval
+
+      // 渡された間隔を使用する
+      // ...または、更新されたデータで関数を呼び出して間隔を取得する
       const interval = isFunction(refreshInterval)
         ? refreshInterval(data)
         : refreshInterval
@@ -605,6 +637,10 @@ export const useSWRHandler = <Data = any, Error = any>(
       // We only start the next interval if `refreshInterval` is not 0, and:
       // - `force` is true, which is the start of polling
       // - or `timer` is not 0, which means the effect wasn't canceled
+
+      // `refreshInterval` が 0 でない場合のみ、次のインターバルを開始します。
+      // - `force` が true の場合、ポーリングが開始されます。
+      // - または `timer` が 0 でない場合、これはエフェクトがキャンセルされていないことを意味します。
       if (interval && timer !== -1) {
         timer = setTimeout(execute, interval)
       }
@@ -613,6 +649,9 @@ export const useSWRHandler = <Data = any, Error = any>(
     function execute() {
       // Check if it's OK to execute:
       // Only revalidate when the page is visible, online, and not errored.
+
+      // 実行してよいかどうかチェックする。
+      // ページが表示され、オンラインであり、エラーになっていないときだけ再検証する。
       if (
         !getCache().error &&
         (refreshWhenHidden || getConfig().isVisible()) &&
@@ -621,6 +660,7 @@ export const useSWRHandler = <Data = any, Error = any>(
         revalidate(WITH_DEDUPE).then(next)
       } else {
         // Schedule the next interval to check again.
+        // 次のインターバルをスケジュールして、再度チェックします。
         next()
       }
     }
@@ -642,15 +682,24 @@ export const useSWRHandler = <Data = any, Error = any>(
   // If there is an `error`, the `error` needs to be thrown to the error boundary.
   // If there is no `error`, the `revalidation` promise needs to be thrown to
   // the suspense boundary.
+
+ // サスペンスモードでは、空の `data` 状態を返すことはできない。
+  // もし `error` があれば、 `error` をエラー境界まで投げる必要がある。
+  // もし `error` がなければ、`revalidation` の約束が投げられる必要がある。
+  // サスペンス境界に投げられる必要がある。
   if (suspense && isUndefined(data) && key) {
     // SWR should throw when trying to use Suspense on the server with React 18,
     // without providing any initial data. See:
     // https://github.com/vercel/swr/issues/1832
+
+    // React 18でサーバー上でSuspensionを使おうとするとSWRが投げるはずです。
+    // は、初期データを提供することなくSee:
     if (!IS_REACT_LEGACY && IS_SERVER) {
       throw new Error('Fallback data is required when using suspense in SSR.')
     }
 
     // Always update fetcher and config refs even with the Suspense mode.
+    // サスペンスモードでもフェッチャーとコンフィグの参照先を常に更新するようにしました。
     fetcherRef.current = fetcher
     configRef.current = config
     unmountedRef.current = false

@@ -5,6 +5,9 @@ import { BUILT_IN_MIDDLEWARE } from './middleware-preset'
 
 // It's tricky to pass generic types as parameters, so we just directly override
 // the types here.
+
+// 汎用的な型をパラメータとして渡すのは厄介なので、ここでは直接型をオーバーライドしています。
+// ここでは型を直接オーバーライドしています。
 export const withArgs = <SWRType>(hook: any) => {
   return function useSWRArgs(...args: any) {
     // Get the default and inherited configuration.

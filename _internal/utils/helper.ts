@@ -7,6 +7,10 @@ export const noop = () => {}
 // Using noop() as the undefined value as undefined can be replaced
 // by something else. Prettier ignore and extra parentheses are necessary here
 // to ensure that tsc doesn't remove the __NOINLINE__ comment.
+
+// undefinedは置き換えられるので、noop()をundefined値として使用する
+// 他の何かで置き換えることができます。ここでは、よりきれいな無視と余分な括弧が必要である。
+// tsc が __NOINLINE__ コメントを削除しないようにするためです。
 // prettier-ignore
 export const UNDEFINED = (/*#__NOINLINE__*/ noop()) as undefined
 
